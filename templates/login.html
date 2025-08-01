@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>Login</h2>
+    <form method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required value="{{ username if username else '' }}">
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Log In</button>
+    </form>
+    <p>Don't have an account? Ask an administrator to create one.</p>
+    <!-- We are not providing a public registration page for security.
+         Users will be created via a CLI command by you. -->
+</div>
+{% endblock %}
