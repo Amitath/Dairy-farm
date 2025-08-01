@@ -2,5 +2,6 @@ Flask
 Flask-SQLAlchemy
 pandas
 openpyxl
-gunicorn           # <-- Add Gunicorn
-psycopg2-binary    # <-- Add this back for PostgreSQL
+gunicorn
+psycopg2-binary
+Flask-Login
