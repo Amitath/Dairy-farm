@@ -7,17 +7,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 # --- User Model (NEW) ---
-class User(db.Model, UserMixin): # Inherits from db.Model for database, UserMixin for Flask-Login
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False) # Stores the hashed password
+    # CHANGE THIS LINE:
+    password_hash = db.Column(db.String(255), nullable=False) # <--- Changed from 128 to 255
 
     def set_password(self, password):
-        """Hashes the given password using a secure algorithm."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Checks if the provided password matches the stored hashed password."""
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
