@@ -25,18 +25,19 @@ def inject_common_variables(): # Renamed from inject_today for clarity, but old 
         'now': datetime.now # <--- ADD THIS LINE
     }
 
+
 # --- Flask CLI Custom Commands ---
-@app.cli.command("create-db")
+@app.cli.command("create-db") # <-- This is your command
 def create_db_command():
     """Creates the database tables."""
-    instance_path = os.path.join(app.root_path, 'instance')
+    instance_path = os.path.join(app.root_path, 'instance') # (This part is mostly for SQLite, harmless for PG)
     if not os.path.exists(instance_path):
         os.makedirs(instance_path)
         click.echo(f"Created instance directory: {instance_path}")
-    db.create_all()
-    click.echo("Database tables created!")
 
-# --- Routes ---
+    db.create_all() # <-- This creates the tables in your Render PostgreSQL DB
+    click.echo("Database tables created!")
+    
 # --- Routes ---
 @app.route('/')
 def index():
