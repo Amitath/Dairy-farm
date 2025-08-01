@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Total Cows</h3>
+        <p>{{ total_cows }}</p>
+    </div>
+    <div class="card">
+        <h3>Active Cows</h3>
+        <p>{{ active_cows }}</p>
+    </div>
+    <div class="card">
+        <h3>Today's Milk Production</h3>
+        <p>{{ "%.2f"|format(total_today_milk) }} Liters</p>
+    </div>
+    <div class="card">
+        <h3>Total Amount Receivable</h3>
+        <p>RWF {{ "%.2f"|format(total_receivable) }}</p>
+    </div>
+</div>
+
+<h3>Recent Sales</h3>
+{% if recent_sales %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Quantity (L)</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in recent_sales %}
+            <tr>
+                <td>{{ sale.date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ sale.customer.name }}</td>
+                <td>{{ "%.2f"|format(sale.milk_quantity_liters) }}</td>
+                <td>RWF {{ "%.2f"|format(sale.total_amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No recent sales.</p>
+{% endif %}
+
+<h3>Recent Expenses</h3>
+{% if recent_expenses %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in recent_expenses %}
+            <tr>
+                <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ expense.category }}</td>
+                <td>RWF {{ "%.2f"|format(expense.amount) }}</td>
+                <td>{{ expense.description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No recent expenses.</p>
+{% endif %}
+{% endblock %}

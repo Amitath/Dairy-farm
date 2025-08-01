@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Log Milk Production{% endblock %}
+
+{% block content %}
+<h2>Log Daily Milk Production</h2>
+<form method="POST">
+    <label for="cow_id">Select Cow:</label>
+    <select id="cow_id" name="cow_id" required>
+        <option value="">-- Select a Cow --</option>
+        {% for cow in cows %}
+            <option value="{{ cow.id }}">{{ cow.name }} ({{ cow.cow_id }})</option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Date:</label>
+    <input type="date" id="date" name="date" value="{{ today.strftime('%Y-%m-%d') }}" required>
+
+    <label for="morning_qty">Morning Quantity (Liters):</label>
+    <input type="number" id="morning_qty" name="morning_qty" step="0.01" min="0" required>
+
+    <label for="evening_qty">Evening Quantity (Liters):</label>
+    <input type="number" id="evening_qty" name="evening_qty" step="0.01" min="0" required>
+
+    <button type="submit">Log Production</button>
+</form>
+{% endblock %}

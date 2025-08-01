@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}View Sales History{% endblock %}
+
+{% block content %}
+<h2>Sales History</h2>
+{% if sales %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Quantity (L)</th>
+                <th>Price/Liter (RWF)</th>
+                <th>Total Amount (RWF)</th>
+                <th>Status</th>
+                <th>Logged At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            <tr>
+                <td>{{ sale.date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ sale.customer.name }}</td>
+                <td>{{ "%.2f"|format(sale.milk_quantity_liters) }}</td>
+                <td>{{ "%.2f"|format(sale.price_per_liter) }}</td>
+                <td>{{ "%.2f"|format(sale.total_amount) }}</td>
+                <td>{{ 'Paid' if sale.is_paid else 'Unpaid' }}</td>
+                <td>{{ sale.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <!-- Add Edit/Delete links here later -->
+                    <a href="#">Edit</a> | <a href="#">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No sales records found. <a href="{{ url_for('record_sale') }}">Record a sale now</a>.</p>
+{% endif %}
+{% endblock %}

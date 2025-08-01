@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}View Customers{% endblock %}
+
+{% block content %}
+<h2>All Customers</h2>
+{% if customers %}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Contact Info</th>
+                <th>Amount Owed (RWF)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+            <tr>
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.contact_info if customer.contact_info else 'N/A' }}</td>
+                <td class="{% if customer.balance > 0 %}expense-amount{% else %}income-amount{% endif %}">
+                    {{ "%.2f"|format(customer.balance) }}
+                </td>
+                <td>
+                    <!-- Add Edit/Delete/View Transactions links here later -->
+                    <a href="#">Edit</a> | <a href="#">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No customers registered yet. <a href="{{ url_for('add_customer') }}">Add one now</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Add New Cow{% endblock %}
+
+{% block content %}
+<h2>Add New Cow</h2>
+<form method="POST">
+    <label for="cow_id">Cow Unique ID/Name:</label>
+    <input type="text" id="cow_id" name="cow_id" required value="{{ request.form.cow_id if request.form.cow_id else '' }}">
+
+    <label for="name">Cow Name:</label>
+    <input type="text" id="name" name="name" required value="{{ request.form.name if request.form.name else '' }}">
+
+    <label for="breed">Breed (Optional):</label>
+    <input type="text" id="breed" name="breed" value="{{ request.form.breed if request.form.breed else '' }}">
+
+    <label for="date_of_birth">Date of Birth (YYYY-MM-DD, Optional):</label>
+    <input type="date" id="date_of_birth" name="date_of_birth" value="{{ request.form.date_of_birth if request.form.date_of_birth else '' }}">
+
+    <button type="submit">Add Cow</button>
+</form>
+{% endblock %}

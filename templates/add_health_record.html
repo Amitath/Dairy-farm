@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Add Health Record{% endblock %}
+
+{% block content %}
+<h2>Add Health Record</h2>
+<form method="POST">
+    <label for="cow_id">Select Cow:</label>
+    <select id="cow_id" name="cow_id" required>
+        <option value="">-- Select a Cow --</option>
+        {% for cow in cows %}
+            <option value="{{ cow.id }}">{{ cow.name }} ({{ cow.cow_id }})</option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Date of Record:</label>
+    <input type="date" id="date" name="date" value="{{ today.strftime('%Y-%m-%d') if today else '' }}" required>
+
+    <label for="description">Description of Issue/Event:</label>
+    <textarea id="description" name="description" rows="4" required></textarea>
+
+    <label for="treatment">Treatment/Action Taken (Optional):</label>
+    <textarea id="treatment" name="treatment" rows="4"></textarea>
+
+    <label for="veterinarian">Veterinarian/Personnel (Optional):</label>
+    <input type="text" id="veterinarian" name="veterinarian">
+
+    <button type="submit">Add Health Record</button>
+</form>
+{% endblock %}

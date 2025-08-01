@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dairy Farm Manager - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Dairy Farm Manager</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Dashboard</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Cows</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('view_cows') }}">View All Cows</a>
+                        <a href="{{ url_for('add_cow') }}">Add New Cow</a>
+                    </div>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Milk Production</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('log_milk_production') }}">Log Production</a>
+                        <a href="{{ url_for('milk_history') }}">History</a>
+                    </div>
+                </li>
+                 <li class="dropdown">
+                    <a href="#" class="dropbtn">Health</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('add_health_record') }}">Add Record</a>
+                        <a href="{{ url_for('view_health_records') }}">View Records</a>
+                    </div>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Customers & Sales</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('view_customers') }}">View Customers</a>
+                        <a href="{{ url_for('add_customer') }}">Add Customer</a>
+                        <a href="{{ url_for('record_sale') }}">Record Sale</a>
+                        <a href="{{ url_for('view_sales') }}">View Sales</a>
+                        <a href="{{ url_for('record_payment') }}">Record Payment</a>
+                        <a href="{{ url_for('view_payments') }}">View Payments</a>
+                        <a href="{{ url_for('amounts_receivable') }}">Amounts Receivable</a>
+                    </div>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Expenses</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('record_expense') }}">Record Expense</a>
+                        <a href="{{ url_for('view_expenses') }}">View Expenses</a>
+                    </div>
+                </li>
+                <li><a href="{{ url_for('profit_loss') }}">Profit & Loss</a></li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Export Data</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('export_milk_production') }}">Milk Production</a>
+                        <a href="{{ url_for('export_health_records') }}">Health Records</a>
+                        <a href="{{ url_for('export_sales') }}">Sales History</a>
+                        <a href="{{ url_for('export_payments') }}">Payments History</a>
+                        <a href="{{ url_for('export_expenses') }}">Expense History</a>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>© {{ now().year }} Dairy Farm Manager</p>
+    </footer>
+</body>
+</html>

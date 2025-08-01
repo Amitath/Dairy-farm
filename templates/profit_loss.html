@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Profit and Loss Statement{% endblock %}
+
+{% block content %}
+<h2>Profit and Loss Statement</h2>
+
+<form method="POST" class="filter-form">
+    <label for="start_date">Start Date:</label>
+    <input type="date" id="start_date" name="start_date" value="{{ start_date.strftime('%Y-%m-%d') if start_date else '' }}">
+
+    <label for="end_date">End Date:</label>
+    <input type="date" id="end_date" name="end_date" value="{{ end_date.strftime('%Y-%m-%d') if end_date else '' }}">
+
+    <button type="submit">Generate Report</button>
+</form>
+
+{% if start_date and end_date %}
+    <h3>Report for {{ start_date.strftime('%Y-%m-%d') }} to {{ end_date.strftime('%Y-%m-%d') }}</h3>
+    <div class="summary-cards">
+        <div class="card">
+            <h3>Total Income (Sales)</h3>
+            <p>RWF {{ "%.2f"|format(total_income) }}</p>
+        </div>
+        <div class="card">
+            <h3>Total Expenses</h3>
+            <p>RWF {{ "%.2f"|format(total_expenses) }}</p>
+        </div>
+        <div class="card {% if net_profit_loss >= 0 %}profit{% else %}loss{% endif %}">
+            <h3>Net Profit/Loss</h3>
+            <p>RWF {{ "%.2f"|format(net_profit_loss) }}</p>
+        </div>
+    </div>
+
+    <h3>Detailed Transactions</h3>
+    {% if transactions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description / Category</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% if transaction.__class__.__name__ == 'Sale' %}
+                            Sale
+                        {% elif transaction.__class__.__name__ == 'Expense' %}
+                            Expense
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if transaction.__class__.__name__ == 'Sale' %}
+                            Sale to {{ transaction.customer.name }} ({{ "%.2f"|format(transaction.milk_quantity_liters) }} L)
+                        {% elif transaction.__class__.__name__ == 'Expense' %}
+                            {{ transaction.category }}: {{ transaction.description }}
+                        {% endif %}
+                    </td>
+                    <td class="{% if transaction.__class__.__name__ == 'Sale' %}income-amount{% else %}expense-amount{% endif %}">
+                        RWF {{ "%.2f"|format(transaction.total_amount if transaction.__class__.__name__ == 'Sale' else transaction.amount) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No transactions found for the selected period.</p>
+    {% endif %}
+
+{% else %}
+    <p>Select a date range and click "Generate Report" to see the Profit and Loss statement.</p>
+{% endif %}
+{% endblock %}

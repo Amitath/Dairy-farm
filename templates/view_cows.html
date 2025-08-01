@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}View Cows{% endblock %}
+
+{% block content %}
+<h2>All Cows</h2>
+{% if cows %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Breed</th>
+                <th>Date of Birth</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cow in cows %}
+            <tr>
+                <td>{{ cow.cow_id }}</td>
+                <td>{{ cow.name }}</td>
+                <td>{{ cow.breed if cow.breed else 'N/A' }}</td>
+                <td>{{ cow.date_of_birth.strftime('%Y-%m-%d') if cow.date_of_birth else 'N/A' }}</td>
+                <td>{{ cow.status.capitalize() }}</td>
+                <td>
+                    <!-- Add Edit/Delete links here later -->
+                    <a href="#">Edit</a> | <a href="#">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No cows registered yet. <a href="{{ url_for('add_cow') }}">Add one now</a>.</p>
+{% endif %}
+{% endblock %}

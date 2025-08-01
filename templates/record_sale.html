@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Record Milk Sale{% endblock %}
+
+{% block content %}
+<h2>Record Milk Sale</h2>
+<form method="POST">
+    <label for="customer_id">Select Customer:</label>
+    <select id="customer_id" name="customer_id" required>
+        <option value="">-- Select a Customer --</option>
+        {% for customer in customers %}
+            <option value="{{ customer.id }}">{{ customer.name }} (Current Balance: {{ "%.2f"|format(customer.balance) }} RWF)</option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Sale Date:</label>
+    <input type="date" id="date" name="date" value="{{ today.strftime('%Y-%m-%d') if today else '' }}" required>
+
+    <label for="milk_qty">Quantity (Liters):</label>
+    <input type="number" id="milk_qty" name="milk_qty" step="0.01" min="0" required>
+
+    <label for="price_per_liter">Price Per Liter (RWF):</label>
+    <input type="number" id="price_per_liter" name="price_per_liter" step="0.01" min="0" required>
+
+    <button type="submit">Record Sale</button>
+</form>
+{% endblock %}

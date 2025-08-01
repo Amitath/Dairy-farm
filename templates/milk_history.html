@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Milk Production History{% endblock %}
+
+{% block content %}
+<h2>Milk Production History</h2>
+{% if milk_records %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Cow</th>
+                <th>Morning (L)</th>
+                <th>Evening (L)</th>
+                <th>Total Daily (L)</th>
+                <th>Logged At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in milk_records %}
+            <tr>
+                <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ record.cow.name }} ({{ record.cow.cow_id }})</td>
+                <td>{{ "%.2f"|format(record.morning_qty_liters) }}</td>
+                <td>{{ "%.2f"|format(record.evening_qty_liters) }}</td>
+                <td>{{ "%.2f"|format(record.total_daily_quantity()) }}</td>
+                <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No milk production records found. <a href="{{ url_for('log_milk_production') }}">Log some now</a>.</p>
+{% endif %}
+{% endblock %}

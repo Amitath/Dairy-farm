@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Amounts Receivable{% endblock %}
+
+{% block content %}
+<h2>Amounts Receivable (Customers Who Owe You)</h2>
+{% if customers_owing %}
+    <table>
+        <thead>
+            <tr>
+                <th>Customer Name</th>
+                <th>Contact Info</th>
+                <th>Amount Owed (RWF)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers_owing %}
+            <tr>
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.contact_info if customer.contact_info else 'N/A' }}</td>
+                <td class="expense-amount">
+                    {{ "%.2f"|format(customer.balance) }}
+                </td>
+                <td>
+                    <!-- Link to customer's sales/payments history or record a payment -->
+                    <a href="{{ url_for('record_payment', customer_id=customer.id) }}">Record Payment</a> | <a href="#">View Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Great! No customers currently owe you money.</p>
+{% endif %}
+{% endblock %}

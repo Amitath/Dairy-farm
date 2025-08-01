@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Record Expense{% endblock %}
+
+{% block content %}
+<h2>Record Farm Expense</h2>
+<form method="POST">
+    <label for="date">Expense Date:</label>
+    <input type="date" id="date" name="date" value="{{ today.strftime('%Y-%m-%d') if today else '' }}" required>
+
+    <label for="category">Category:</label>
+    <select id="category" name="category" required>
+        <option value="">-- Select Category --</option>
+        <option value="Feed">Feed</option>
+        <option value="Veterinary">Veterinary Services</option>
+        <option value="Labor">Labor/Wages</option>
+        <option value="Maintenance">Equipment Maintenance</option>
+        <option value="Utilities">Utilities (Water, Electricity)</option>
+        <option value="Fuel">Fuel</option>
+        <option value="Supplies">Farm Supplies</option>
+        <option value="Other">Other</option>
+    </select>
+
+    <label for="amount">Amount (RWF):</label>
+    <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+
+    <label for="description">Description (Optional):</label>
+    <textarea id="description" name="description" rows="3"></textarea>
+
+    <button type="submit">Record Expense</button>
+</form>
+{% endblock %}
