@@ -1,46 +1,112 @@
 # app.py
 import os
-
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file
-from models import db, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense
+from models import db, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User # <--- Import User model
 from datetime import date, datetime
 from sqlalchemy import func, extract
 from config import Config
 import click
-import pandas as pd # <--- Import pandas
+import pandas as pd
 import io
+# Flask-Login imports:
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+
 app = Flask(__name__)
-
-# --- Database Configuration ---
-# Replace with your PostgreSQL credentials
 app.config.from_object(Config)
-
 db.init_app(app)
-# --- Context Processor ---
-# This makes 'today' and 'now' available in ALL your templates
+
+# --- Flask-Login Setup ---
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' # This tells Flask-Login the route name for your login page
+login_manager.login_message_category = 'info' # Category for flash messages
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Callback for Flask-Login to reload the user object from the user ID stored in the session."""
+    return db.session.get(User, int(user_id)) # Use db.session.get for primary key lookup
+
+# --- Context Processor (Make current_user available to all templates) ---
 @app.context_processor
-def inject_common_variables(): # Renamed from inject_today for clarity, but old name works too
+def inject_common_variables():
     return {
         'today': date.today(),
-        'now': datetime.now # <--- ADD THIS LINE
+        'now': datetime.now,
+        'current_user': current_user # Make Flask-Login's current_user object available
     }
 
-
 # --- Flask CLI Custom Commands ---
-@app.cli.command("create-db") # <-- This is your command
+@app.cli.command("create-db")
 def create_db_command():
     """Creates the database tables."""
-    instance_path = os.path.join(app.root_path, 'instance') # (This part is mostly for SQLite, harmless for PG)
+    instance_path = os.path.join(app.root_path, 'instance')
     if not os.path.exists(instance_path):
         os.makedirs(instance_path)
         click.echo(f"Created instance directory: {instance_path}")
 
-    db.create_all() # <-- This creates the tables in your Render PostgreSQL DB
+    db.create_all() # This now also creates the 'user' table
     click.echo("Database tables created!")
-    
-# --- Routes ---
+
+@app.cli.command("create-admin-user") # <--- NEW CLI COMMAND to create the first user
+@click.argument('username')
+@click.argument('password')
+def create_admin_user_command(username, password):
+    """Creates an initial admin user."""
+    with app.app_context():
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            click.echo(f"User '{username}' already exists. Please choose a different username.")
+            return
+
+        new_user = User(username=username)
+        new_user.set_password(password) # Hash the password
+        db.session.add(new_user)
+        db.session.commit()
+        click.echo(f"Admin user '{username}' created successfully!")
+
+
+# --- Authentication Routes ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        # If user is already logged in, redirect them to the dashboard
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        user = User.query.filter_by(username=username).first()
+
+        # Check if user exists AND password is correct
+        if user is None or not user.check_password(password):
+            flash('Invalid username or password', 'danger')
+            return render_template('login.html', username=username) # Pass username back to repopulate form
+        
+        login_user(user) # Log the user in (Flask-Login handles session)
+        flash('Logged in successfully!', 'success')
+        
+        # Redirect to the page they tried to access before being redirected to login
+        next_page = request.args.get('next')
+        return redirect(next_page or url_for('index')) # Redirect to 'index' if no 'next' page
+
+    return render_template('login.html') # Render the login form on GET request
+
+@app.route('/logout')
+@login_required # User must be logged in to logout (Flask-Login will redirect if not)
+def logout():
+    logout_user() # Log the user out (Flask-Login handles session clearing)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login')) # Redirect to login page after logout
+
+
+# --- Protected Routes (Add @login_required to ALL routes that need protection) ---
+
 @app.route('/')
+@login_required # <--- PROTECT THIS ROUTE
 def index():
+    # ... (existing code for dashboard) ...
     total_cows = Cow.query.count()
     active_cows = Cow.query.filter_by(status='active').count()
 
@@ -61,14 +127,17 @@ def index():
                            recent_sales=recent_sales,
                            recent_expenses=recent_expenses)
 
-# --- Cow Management ---
+# Apply @login_required to ALL other routes where data access/modification is needed:
 @app.route('/cows')
+@login_required
 def view_cows():
     cows = Cow.query.all()
     return render_template('view_cows.html', cows=cows)
 
 @app.route('/cows/add', methods=['GET', 'POST'])
+@login_required
 def add_cow():
+    # ... (existing add_cow code) ...
     if request.method == 'POST':
         cow_id = request.form['cow_id']
         name = request.form['name']
@@ -100,8 +169,9 @@ def add_cow():
             flash(f'Error adding cow: {str(e)}', 'danger')
     return render_template('add_cow.html')
 
-# --- Milk Production ---
+
 @app.route('/milk_production/log', methods=['GET', 'POST'])
+@login_required
 def log_milk_production():
     cows = Cow.query.filter_by(status='active').all()
     if request.method == 'POST':
@@ -137,13 +207,15 @@ def log_milk_production():
             flash(f'Error logging milk production: {str(e)}', 'danger')
     return render_template('log_milk_production.html', cows=cows)
 
+
 @app.route('/milk_production/history')
+@login_required
 def milk_history():
     milk_records = MilkProduction.query.order_by(MilkProduction.date.desc(), MilkProduction.timestamp.desc()).all()
     return render_template('milk_history.html', milk_records=milk_records)
 
-# --- Health Records ---
 @app.route('/health_records/add', methods=['GET', 'POST'])
+@login_required
 def add_health_record():
     cows = Cow.query.filter_by(status='active').all()
     if request.method == 'POST':
@@ -182,17 +254,19 @@ def add_health_record():
     return render_template('add_health_record.html', cows=cows)
 
 @app.route('/health_records')
+@login_required
 def view_health_records():
     health_records = HealthRecord.query.order_by(HealthRecord.date.desc(), HealthRecord.timestamp.desc()).all()
     return render_template('view_health_records.html', health_records=health_records)
 
-# --- Customer Management ---
 @app.route('/customers')
+@login_required
 def view_customers():
     customers = Customer.query.order_by(Customer.name).all()
     return render_template('view_customers.html', customers=customers)
 
 @app.route('/customers/add', methods=['GET', 'POST'])
+@login_required
 def add_customer():
     if request.method == 'POST':
         name = request.form['name']
@@ -209,8 +283,8 @@ def add_customer():
             flash(f'Error adding customer: {str(e)}', 'danger')
     return render_template('add_customer.html')
 
-# --- Sales ---
 @app.route('/sales/record', methods=['GET', 'POST'])
+@login_required
 def record_sale():
     customers = Customer.query.order_by(Customer.name).all()
     if request.method == 'POST':
@@ -240,7 +314,6 @@ def record_sale():
         )
         try:
             db.session.add(new_sale)
-            # Update customer's balance
             customer.balance += total_amount
             db.session.commit()
             flash(f'Sale to {customer.name} recorded successfully! Amount: {total_amount:.2f}', 'success')
@@ -251,12 +324,13 @@ def record_sale():
     return render_template('record_sale.html', customers=customers)
 
 @app.route('/sales')
+@login_required
 def view_sales():
     sales = Sale.query.order_by(Sale.date.desc(), Sale.timestamp.desc()).all()
     return render_template('view_sales.html', sales=sales)
 
-# --- Payments ---
 @app.route('/payments/record', methods=['GET', 'POST'])
+@login_required
 def record_payment():
     customers = Customer.query.order_by(Customer.name).all()
     if request.method == 'POST':
@@ -284,7 +358,6 @@ def record_payment():
         )
         try:
             db.session.add(new_payment)
-            # Update customer's balance
             customer.balance -= amount_received
             db.session.commit()
             flash(f'Payment from {customer.name} recorded successfully! Amount: {amount_received:.2f}', 'success')
@@ -295,12 +368,13 @@ def record_payment():
     return render_template('record_payment.html', customers=customers)
 
 @app.route('/payments')
+@login_required
 def view_payments():
     payments = Payment.query.order_by(Payment.date.desc(), Payment.timestamp.desc()).all()
     return render_template('view_payments.html', payments=payments)
 
-# --- Expenses ---
 @app.route('/expenses/record', methods=['GET', 'POST'])
+@login_required
 def record_expense():
     if request.method == 'POST':
         date_str = request.form['date']
@@ -331,19 +405,20 @@ def record_expense():
     return render_template('record_expense.html')
 
 @app.route('/expenses')
+@login_required
 def view_expenses():
     expenses = Expense.query.order_by(Expense.date.desc(), Expense.timestamp.desc()).all()
     return render_template('view_expenses.html', expenses=expenses)
 
-# --- Reports ---
 @app.route('/profit_loss', methods=['GET', 'POST'])
+@login_required
 def profit_loss():
     start_date = None
     end_date = None
     total_income = 0.0
     total_expenses = 0.0
     net_profit_loss = 0.0
-    transactions = [] # To display relevant transactions
+    transactions = []
 
     if request.method == 'POST':
         start_date_str = request.form.get('start_date')
@@ -358,7 +433,6 @@ def profit_loss():
             flash("Invalid date format. Please use YYYY-MM-DD.", 'danger')
             return render_template('profit_loss.html')
 
-        # Calculate Income (Sales)
         sales_query = db.session.query(func.sum(Sale.total_amount))
         if start_date:
             sales_query = sales_query.filter(Sale.date >= start_date)
@@ -366,7 +440,6 @@ def profit_loss():
             sales_query = sales_query.filter(Sale.date <= end_date)
         total_income = sales_query.scalar() or 0.0
 
-        # Calculate Expenses
         expenses_query = db.session.query(func.sum(Expense.amount))
         if start_date:
             expenses_query = expenses_query.filter(Expense.date >= start_date)
@@ -376,7 +449,6 @@ def profit_loss():
 
         net_profit_loss = total_income - total_expenses
 
-        # Fetch relevant sales and expenses for detailed view
         sales_data = Sale.query
         expenses_data = Expense.query
 
@@ -389,7 +461,7 @@ def profit_loss():
 
         transactions.extend(sales_data.order_by(Sale.date.desc()).all())
         transactions.extend(expenses_data.order_by(Expense.date.desc()).all())
-        transactions.sort(key=lambda x: x.date, reverse=True) # Sort by date
+        transactions.sort(key=lambda x: x.date, reverse=True)
 
     return render_template('profit_loss.html',
                            start_date=start_date,
@@ -401,30 +473,13 @@ def profit_loss():
 
 
 @app.route('/amounts_receivable')
+@login_required
 def amounts_receivable():
-    # Customers with a positive balance (they owe you)
     customers_owing = Customer.query.filter(Customer.balance > 0).order_by(Customer.name).all()
     return render_template('amounts_receivable.html', customers_owing=customers_owing)
 
-
-# --- Database Initialization (Run once) ---
-@app.route('/init_db')
-def init_db():
-    with app.app_context():
-        # This creates the 'instance' folder if it doesn't exist
-        instance_path = os.path.join(app.root_path, 'instance')
-        if not os.path.exists(instance_path):
-            os.makedirs(instance_path)
-            print(f"Created instance directory: {instance_path}") # Optional: for confirmation
-
-        # This creates all the tables defined in your models.py
-        db.create_all()
-        print("Database tables created successfully!")  # Add this for confirmation
-    return "Database tables created!"
-
-# --- EXPORT ROUTES ---
-
 @app.route('/export/milk_production')
+@login_required
 def export_milk_production():
     milk_records = MilkProduction.query.all()
     data = []
@@ -443,13 +498,14 @@ def export_milk_production():
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine='openpyxl')
     df.to_excel(writer, index=False, sheet_name='Milk Production')
-    writer.close() # Use writer.close() instead of writer.save() for newer pandas
+    writer.close()
     output.seek(0)
 
     return send_file(output, as_attachment=True, download_name=f'milk_production_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 @app.route('/export/health_records')
+@login_required
 def export_health_records():
     health_records = HealthRecord.query.all()
     data = []
@@ -474,6 +530,7 @@ def export_health_records():
     return send_file(output, as_attachment=True, download_name=f'health_records_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/export/sales')
+@login_required
 def export_sales():
     sales = Sale.query.all()
     data = []
@@ -498,6 +555,7 @@ def export_sales():
     return send_file(output, as_attachment=True, download_name=f'sales_history_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/export/payments')
+@login_required
 def export_payments():
     payments = Payment.query.all()
     data = []
@@ -520,6 +578,7 @@ def export_payments():
     return send_file(output, as_attachment=True, download_name=f'payments_history_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/export/expenses')
+@login_required
 def export_expenses():
     expenses = Expense.query.all()
     data = []
@@ -543,12 +602,4 @@ def export_expenses():
 
 # --- Run the application ---
 if __name__ == '__main__':
-    # Make sure this block is COMMENTED OUT. You should use the /init_db route.
-    # with app.app_context():
-    #     instance_path = os.path.join(app.root_path, 'instance')
-    #     if not os.path.exists(instance_path):
-    #         os.makedirs(instance_path)
-    #         print(f"Created instance directory: {instance_path}")
-    #     db.create_all()
-
-    app.run(debug=True) # debug=True allows auto-reloading and better error messages
+    app.run(debug=True)
