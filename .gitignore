@@ -1,0 +1,3 @@
+# Python virtual environment
+venv/
+.venv/ # Also good to include if you sometimes use .venv as a name
