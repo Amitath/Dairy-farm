@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Edit Health Record{% endblock %}
+
+{% block content %}
+<h2>Edit Health Record</h2>
+<form method="POST">
+    <label for="cow_id">Select Cow:</label>
+    <select id="cow_id" name="cow_id" required>
+        <option value="">-- Select a Cow --</option>
+        {% for cow_option in cows %}
+            <option value="{{ cow_option.id }}" {% if (request.form.cow_id and request.form.cow_id|int == cow_option.id) or (record.cow_id == cow_option.id and not request.form.cow_id) %}selected{% endif %}>
+                {{ cow_option.name }} ({{ cow_option.cow_id }})
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Date of Record:</label>
+    <input type="date" id="date" name="date" required value="{{ request.form.date if request.form.date else record.date.strftime('%Y-%m-%d') }}">
+
+    <label for="description">Description of Issue/Event:</label>
+    <textarea id="description" name="description" rows="4" required>{{ request.form.description if request.form.description else record.description }}</textarea>
+
+    <label for="treatment">Treatment/Action Taken (Optional):</label>
+    <textarea id="treatment" name="treatment" rows="4">{{ request.form.treatment if request.form.treatment else record.treatment if record.treatment else '' }}</textarea>
+
+    <label for="veterinarian">Veterinarian/Personnel (Optional):</label>
+    <input type="text" id="veterinarian" name="veterinarian" value="{{ request.form.veterinarian if request.form.veterinarian else record.veterinarian if record.veterinarian else '' }}">
+
+    <button type="submit">Update Health Record</button>
+</form>
+{% endblock %}
