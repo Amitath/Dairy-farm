@@ -3,31 +3,42 @@
 
 {% block content %}
 <h2>Milk Production History</h2>
+<p><a href="{{ url_for('log_milk_production') }}" class="button add-button">Log New Production</a></p>
+
 {% if milk_records %}
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Cow</th>
-                <th>Morning (L)</th>
-                <th>Evening (L)</th>
-                <th>Total Daily (L)</th>
-                <th>Logged At</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for record in milk_records %}
-            <tr>
-                <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ record.cow.name }} ({{ record.cow.cow_id }})</td>
-                <td>{{ "%.2f"|format(record.morning_qty_liters) }}</td>
-                <td>{{ "%.2f"|format(record.evening_qty_liters) }}</td>
-                <td>{{ "%.2f"|format(record.total_daily_quantity()) }}</td>
-                <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Cow</th>
+                    <th>Morning (L)</th>
+                    <th>Evening (L)</th>
+                    <th>Total Daily (L)</th>
+                    <th>Logged At</th>
+                    <th>Actions</th> {# NEW #}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in milk_records %}
+                <tr>
+                    <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ record.cow.name }} ({{ record.cow.cow_id }})</td>
+                    <td>{{ "%.2f"|format(record.morning_qty_liters) }}</td>
+                    <td>{{ "%.2f"|format(record.evening_qty_liters) }}</td>
+                    <td>{{ "%.2f"|format(record.total_daily_quantity()) }}</td>
+                    <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="actions-column"> {# NEW #}
+                        <a href="{{ url_for('edit_milk_production', record_id=record.id) }}" class="button edit-button">Edit</a>
+                        <form action="{{ url_for('delete_milk_production', record_id=record.id) }}" method="POST" style="display:inline;" onsubmit="return confirmDelete('milk production record', 'on {{ record.date.strftime('%Y-%m-%d') }} for {{ record.cow.name }}');">
+                            <button type="submit" class="button delete-button">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
     <p>No milk production records found. <a href="{{ url_for('log_milk_production') }}">Log some now</a>.</p>
 {% endif %}
