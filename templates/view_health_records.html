@@ -3,36 +3,42 @@
 
 {% block content %}
 <h2>Health Records History</h2>
+<p><a href="{{ url_for('add_health_record') }}" class="button add-button">Add New Health Record</a></p>
+
 {% if health_records %}
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Cow</th>
-                <th>Description</th>
-                <th>Treatment</th>
-                <th>Veterinarian</th>
-                <th>Logged At</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for record in health_records %}
-            <tr>
-                <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ record.cow.name }} ({{ record.cow.cow_id }})</td>
-                <td>{{ record.description }}</td>
-                <td>{{ record.treatment if record.treatment else 'N/A' }}</td>
-                <td>{{ record.veterinarian if record.veterinarian else 'N/A' }}</td>
-                <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td>
-                    <!-- Add Edit/Delete links here later -->
-                    <a href="#">Edit</a> | <a href="#">Delete</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Cow</th>
+                    <th>Description</th>
+                    <th>Treatment</th>
+                    <th>Veterinarian</th>
+                    <th>Logged At</th>
+                    <th>Actions</th> {# NEW #}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in health_records %}
+                <tr>
+                    <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ record.cow.name }} ({{ record.cow.cow_id }})</td>
+                    <td>{{ record.description }}</td>
+                    <td>{{ record.treatment if record.treatment else 'N/A' }}</td>
+                    <td>{{ record.veterinarian if record.veterinarian else 'N/A' }}</td>
+                    <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="actions-column"> {# NEW #}
+                        <a href="{{ url_for('edit_health_record', record_id=record.id) }}" class="button edit-button">Edit</a>
+                        <form action="{{ url_for('delete_health_record', record_id=record.id) }}" method="POST" style="display:inline;" onsubmit="return confirmDelete('health record', 'on {{ record.date.strftime('%Y-%m-%d') }} for {{ record.cow.name }}');">
+                            <button type="submit" class="button delete-button">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
     <p>No health records found. <a href="{{ url_for('add_health_record') }}">Add one now</a>.</p>
 {% endif %}
