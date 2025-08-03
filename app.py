@@ -1162,7 +1162,7 @@ def export_vaccinations():
 
     return send_file(output, as_attachment=True, download_name=f'vaccination_history_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-# --- Run the application ---
-if __name__ == '__main__':
-    app.run(debug=True)```
+# ... (rest of your app.py code) ...
 
+if __name__ == '__main__':
+    app.run(debug=True)
