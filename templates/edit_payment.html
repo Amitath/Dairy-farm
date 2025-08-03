@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Edit Payment Record{% endblock %}
+
+{% block content %}
+<h2>Edit Payment Record</h2>
+<form method="POST">
+    <label for="customer_id">Select Customer:</label>
+    <select id="customer_id" name="customer_id" required>
+        <option value="">-- Select a Customer --</option>
+        {% for customer_option in customers %}
+            <option value="{{ customer_option.id }}" {% if (request.form.customer_id and request.form.customer_id|int == customer_option.id) or (payment.customer_id == customer_option.id and not request.form.customer_id) %}selected{% endif %}>
+                {{ customer_option.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Payment Date:</label>
+    <input type="date" id="date" name="date" required value="{{ request.form.date if request.form.date else payment.date.strftime('%Y-%m-%d') }}">
+
+    <label for="amount_received">Amount Received (RWF):</label>
+    <input type="number" id="amount_received" name="amount_received" step="0.01" min="0" required value="{{ request.form.amount_received if request.form.amount_received else '%.2f'|format(payment.amount_received) }}">
+
+    <label for="description">Description (Optional):</label>
+    <textarea id="description" name="description" rows="3">{{ request.form.description if request.form.description else payment.description if payment.description else '' }}</textarea>
+
+    <button type="submit">Update Payment</button>
+</form>
+{% endblock %}
