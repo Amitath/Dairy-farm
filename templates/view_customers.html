@@ -3,32 +3,38 @@
 
 {% block content %}
 <h2>All Customers</h2>
+<p><a href="{{ url_for('add_customer') }}" class="button add-button">Add New Customer</a></p>
+
 {% if customers %}
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Contact Info</th>
-                <th>Amount Owed (RWF)</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for customer in customers %}
-            <tr>
-                <td>{{ customer.name }}</td>
-                <td>{{ customer.contact_info if customer.contact_info else 'N/A' }}</td>
-                <td class="{% if customer.balance > 0 %}expense-amount{% else %}income-amount{% endif %}">
-                    {{ "%.2f"|format(customer.balance) }}
-                </td>
-                <td>
-                    <!-- Add Edit/Delete/View Transactions links here later -->
-                    <a href="#">Edit</a> | <a href="#">Delete</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact Info</th>
+                    <th>Amount Owed (RWF)</th>
+                    <th>Actions</th> {# NEW #}
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr>
+                    <td>{{ customer.name }}</td>
+                    <td>{{ customer.contact_info if customer.contact_info else 'N/A' }}</td>
+                    <td class="{% if customer.balance > 0 %}expense-amount{% else %}income-amount{% endif %}">
+                        {{ "%.2f"|format(customer.balance) }}
+                    </td>
+                    <td class="actions-column"> {# NEW #}
+                        <a href="{{ url_for('edit_customer', customer_id=customer.id) }}" class="button edit-button">Edit</a>
+                        <form action="{{ url_for('delete_customer', customer_id=customer.id) }}" method="POST" style="display:inline;" onsubmit="return confirmDelete('customer', '{{ customer.name }}');">
+                            <button type="submit" class="button delete-button">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
     <p>No customers registered yet. <a href="{{ url_for('add_customer') }}">Add one now</a>.</p>
 {% endif %}
