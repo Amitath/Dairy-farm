@@ -3,6 +3,8 @@
 
 {% block content %}
 <h2>All Vaccination Records</h2>
+<p><a href="{{ url_for('add_vaccination') }}" class="button add-button">Add New Vaccination</a></p>
+
 {% if vaccinations %}
     <div class="table-responsive">
         <table>
@@ -30,9 +32,11 @@
                     <td>{{ vac.status }}</td>
                     <td>{{ vac.notes if vac.notes else 'N/A' }}</td>
                     <td>{{ vac.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                        <!-- Add Edit/Delete links here later -->
-                        <a href="#">Edit</a> | <a href="#">Delete</a>
+                    <td class="actions-column">
+                        <a href="{{ url_for('edit_vaccination', vac_id=vac.id) }}" class="button edit-button">Edit</a>
+                        <form action="{{ url_for('delete_vaccination', vac_id=vac.id) }}" method="POST" style="display:inline;" onsubmit="return confirmDelete('vaccination record', '{{ vac.vaccine_name }} for {{ vac.cow.name }}');">
+                            <button type="submit" class="button delete-button">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
