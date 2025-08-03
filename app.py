@@ -690,7 +690,35 @@ def export_expenses():
 
     return send_file(output, as_attachment=True, download_name=f'expenses_history_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+
+@app.route('/export/vaccinations') # <--- NEW ROUTE
+@login_required
+def export_vaccinations():
+    vaccinations = Vaccination.query.all() # Fetch all vaccination records
+    data = []
+    for vac in vaccinations:
+        data.append({
+            'Cow Name': vac.cow.name,
+            'Cow ID': vac.cow.cow_id,
+            'Vaccine Name': vac.vaccine_name,
+            'Vaccination Date': vac.vaccination_date.strftime('%Y-%m-%d'),
+            'Next Due Date': vac.next_due_date.strftime('%Y-%m-%d') if vac.next_due_date else 'N/A',
+            'Status': vac.status,
+            'Notes': vac.notes,
+            'Logged At': vac.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, index=False, sheet_name='Vaccination History')
+    writer.close()
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=f'vaccination_history_{date.today().strftime("%Y%m%d")}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 # --- Run the application ---
 if __name__ == '__main__':
     app.run(debug=True)
+
 
