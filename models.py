@@ -6,12 +6,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
-# --- User Model (NEW) ---
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    # CHANGE THIS LINE:
-    password_hash = db.Column(db.String(255), nullable=False) # <--- Changed from 128 to 255
+    password_hash = db.Column(db.String(255), nullable=False) # Changed to 255 for scrypt hashes
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -21,17 +19,25 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f"<User {self.username}>"
-        
+
 class Cow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    cow_id = db.Column(db.String(50), unique=True, nullable=False) # Unique ID/Name
+    cow_id = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     breed = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date)
     status = db.Column(db.String(50), default='active') # e.g., 'active', 'sold', 'deceased'
 
+    # --- NEW REMINDER FIELDS ---
+    expected_calving_date = db.Column(db.Date)
+    is_pregnant = db.Column(db.Boolean, default=False)
+    # ---------------------------
+
     milk_productions = db.relationship('MilkProduction', backref='cow', lazy=True)
     health_records = db.relationship('HealthRecord', backref='cow', lazy=True)
+    # Define relationship for new Vaccination model
+    vaccinations = db.relationship('Vaccination', backref='cow', lazy=True)
+
 
     def __repr__(self):
         return f"<Cow {self.name} ({self.cow_id})>"
@@ -42,7 +48,7 @@ class MilkProduction(db.Model):
     date = db.Column(db.Date, nullable=False, default=date.today)
     morning_qty_liters = db.Column(db.Float, nullable=False)
     evening_qty_liters = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow) # When the log was created
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def total_daily_quantity(self):
         return self.morning_qty_liters + self.evening_qty_liters
@@ -62,11 +68,26 @@ class HealthRecord(db.Model):
     def __repr__(self):
         return f"<HealthRecord {self.cow.name} on {self.date}: {self.description[:30]}...>"
 
+# --- NEW VACCINATION MODEL ---
+class Vaccination(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cow_id = db.Column(db.Integer, db.ForeignKey('cow.id'), nullable=False)
+    vaccine_name = db.Column(db.String(100), nullable=False)
+    vaccination_date = db.Column(db.Date, nullable=False, default=date.today)
+    next_due_date = db.Column(db.Date) # When the next dose is due
+    status = db.Column(db.String(50), default='Due') # 'Due', 'Completed', 'Overdue'
+    notes = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Vaccination {self.vaccine_name} for {self.cow.name} due {self.next_due_date}>"
+# -----------------------------
+
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     contact_info = db.Column(db.Text)
-    balance = db.Column(db.Float, default=0.0) # Amount owed by customer
+    balance = db.Column(db.Float, default=0.0)
 
     sales = db.relationship('Sale', backref='customer', lazy=True)
     payments = db.relationship('Payment', backref='customer', lazy=True)
@@ -80,7 +101,7 @@ class Sale(db.Model):
     date = db.Column(db.Date, nullable=False, default=date.today)
     milk_quantity_liters = db.Column(db.Float, nullable=False)
     price_per_liter = db.Column(db.Float, nullable=False)
-    total_amount = db.Column(db.Float, nullable=False) # Calculated
+    total_amount = db.Column(db.Float, nullable=False)
     is_paid = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -101,7 +122,7 @@ class Payment(db.Model):
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False, default=date.today)
-    category = db.Column(db.String(100), nullable=False) # e.g., 'Feed', 'Veterinary', 'Labor'
+    category = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
