@@ -28,10 +28,12 @@
                         </div>
                     </li>
                      <li class="dropdown">
-                        <a href="#" class="dropbtn">Health</a>
+                        <a href="#" class="dropbtn">Health & Vaccinations</a>
                         <div class="dropdown-content">
-                            <a href="{{ url_for('add_health_record') }}">Add Record</a>
-                            <a href="{{ url_for('view_health_records') }}">View Records</a>
+                            <a href="{{ url_for('add_health_record') }}">Add Health Record</a>
+                            <a href="{{ url_for('view_health_records') }}">View Health Records</a>
+                            <a href="{{ url_for('add_vaccination') }}">Add Vaccination</a> {# <--- NEW #}
+                            <a href="{{ url_for('view_vaccinations') }}">View Vaccinations</a> {# <--- NEW #}
                         </div>
                     </li>
                     <li class="dropdown">
@@ -62,6 +64,7 @@
                             <a href="{{ url_for('export_sales') }}">Sales History</a>
                             <a href="{{ url_for('export_payments') }}">Payments History</a>
                             <a href="{{ url_for('export_expenses') }}">Expense History</a>
+                            <a href="{{ url_for('export_vaccinations') }}">Vaccination History</a> {# <--- NEW Export #}
                         </div>
                     </li>
                     <li><a href="{{ url_for('logout') }}">Logout ({{ current_user.username }})</a></li>
