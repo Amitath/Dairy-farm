@@ -1218,3 +1218,8 @@ if __name__ == '__main__':
     <p>No cows registered yet. <a href="{{ url_for('add_cow') }}">Add one now</a>.</p>
 {% endif %}
 {% endblock %}
+
+# ... (rest of your app.py code) ...
+
+if __name__ == '__main__':
+    app.run(debug=True)
