@@ -3,6 +3,46 @@
 
 {% block content %}
 <h2>Dashboard</h2>
+
+<!-- REMINDERS SECTION -->
+{% if upcoming_calving_reminders or upcoming_vaccination_reminders %}
+    <div class="reminders-section">
+        <h3>Upcoming Reminders</h3>
+        <div class="reminders-grid">
+            {% if upcoming_calving_reminders %}
+                <div class="card reminder-card urgent">
+                    <h4>Upcoming Calving Dates</h4>
+                    <ul>
+                        {% for cow in upcoming_calving_reminders %}
+                            <li>
+                                <strong>{{ cow.name }} ({{ cow.cow_id }})</strong> due on
+                                {{ cow.expected_calving_date.strftime('%Y-%m-%d') }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {% if upcoming_vaccination_reminders %}
+                <div class="card reminder-card warning">
+                    <h4>Upcoming / Overdue Vaccinations</h4>
+                    <ul>
+                        {% for vac in upcoming_vaccination_reminders %}
+                            <li class="{% if vac.next_due_date < today %}overdue{% endif %}">
+                                <strong>{{ vac.cow.name }} ({{ vac.cow.cow_id }})</strong> needs 
+                                {{ vac.vaccine_name }} by {{ vac.next_due_date.strftime('%Y-%m-%d') }}
+                                {% if vac.next_due_date < today %} (OVERDUE){% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+<!-- END REMINDERS SECTION -->
+
+
 <div class="dashboard-grid">
     <div class="card">
         <h3>Total Cows</h3>
@@ -24,52 +64,56 @@
 
 <h3>Recent Sales</h3>
 {% if recent_sales %}
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Quantity (L)</th>
-                <th>Total Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for sale in recent_sales %}
-            <tr>
-                <td>{{ sale.date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ sale.customer.name }}</td>
-                <td>{{ "%.2f"|format(sale.milk_quantity_liters) }}</td>
-                <td>RWF {{ "%.2f"|format(sale.total_amount) }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Quantity (L)</th>
+                    <th>Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in recent_sales %}
+                <tr>
+                    <td>{{ sale.date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ sale.customer.name }}</td>
+                    <td>{{ "%.2f"|format(sale.milk_quantity_liters) }}</td>
+                    <td>RWF {{ "%.2f"|format(sale.total_amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
     <p>No recent sales.</p>
 {% endif %}
 
 <h3>Recent Expenses</h3>
 {% if recent_expenses %}
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Description</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for expense in recent_expenses %}
-            <tr>
-                <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ expense.category }}</td>
-                <td>RWF {{ "%.2f"|format(expense.amount) }}</td>
-                <td>{{ expense.description }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in recent_expenses %}
+                <tr>
+                    <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td>RWF {{ "%.2f"|format(expense.amount) }}</td>
+                    <td>{{ expense.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
     <p>No recent expenses.</p>
 {% endif %}
