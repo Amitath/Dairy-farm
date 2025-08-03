@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Edit Customer: {{ customer.name }}{% endblock %}
+
+{% block content %}
+<h2>Edit Customer: {{ customer.name }}</h2>
+<form method="POST">
+    <label for="name">Customer Name:</label>
+    <input type="text" id="name" name="name" required value="{{ request.form.name if request.form.name else customer.name }}">
+
+    <label for="contact_info">Contact Info (Phone, Email, Address - Optional):</label>
+    <textarea id="contact_info" name="contact_info" rows="3">{{ request.form.contact_info if request.form.contact_info else customer.contact_info if customer.contact_info else '' }}</textarea>
+
+    <p style="font-size:0.9em; color:#666;">Current Balance: RWF {{ "%.2f"|format(customer.balance) }} (Update via Sales/Payments)</p>
+
+    <button type="submit">Update Customer</button>
+</form>
+{% endblock %}
