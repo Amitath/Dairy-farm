@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Edit Sale Record{% endblock %}
+
+{% block content %}
+<h2>Edit Sale Record</h2>
+<form method="POST">
+    <label for="customer_id">Select Customer:</label>
+    <select id="customer_id" name="customer_id" required>
+        <option value="">-- Select a Customer --</option>
+        {% for customer_option in customers %}
+            <option value="{{ customer_option.id }}" {% if (request.form.customer_id and request.form.customer_id|int == customer_option.id) or (sale.customer_id == customer_option.id and not request.form.customer_id) %}selected{% endif %}>
+                {{ customer_option.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Sale Date:</label>
+    <input type="date" id="date" name="date" required value="{{ request.form.date if request.form.date else sale.date.strftime('%Y-%m-%d') }}">
+
+    <label for="milk_qty">Quantity (Liters):</label>
+    <input type="number" id="milk_qty" name="milk_qty" step="0.01" min="0" required value="{{ request.form.milk_qty if request.form.milk_qty else '%.2f'|format(sale.milk_quantity_liters) }}">
+
+    <label for="price_per_liter">Price Per Liter (RWF):</label>
+    <input type="number" id="price_per_liter" name="price_per_liter" step="0.01" min="0" required value="{{ request.form.price_per_liter if request.form.price_per_liter else '%.2f'|format(sale.price_per_liter) }}">
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="is_paid" name="is_paid" {% if request.form.is_paid or sale.is_paid %}checked{% endif %}>
+        <label for="is_paid">Is Paid?</label>
+    </div>
+
+    <button type="submit">Update Sale</button>
+</form>
+{% endblock %}
