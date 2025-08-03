@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Edit Milk Production Record{% endblock %}
+
+{% block content %}
+<h2>Edit Milk Production Record</h2>
+<form method="POST">
+    <label for="cow_id">Select Cow:</label>
+    <select id="cow_id" name="cow_id" required>
+        <option value="">-- Select a Cow --</option>
+        {% for cow_option in cows %}
+            <option value="{{ cow_option.id }}" {% if (request.form.cow_id and request.form.cow_id|int == cow_option.id) or (record.cow_id == cow_option.id and not request.form.cow_id) %}selected{% endif %}>
+                {{ cow_option.name }} ({{ cow_option.cow_id }})
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="date">Date:</label>
+    <input type="date" id="date" name="date" required value="{{ request.form.date if request.form.date else record.date.strftime('%Y-%m-%d') }}">
+
+    <label for="morning_qty">Morning Quantity (Liters):</label>
+    <input type="number" id="morning_qty" name="morning_qty" step="0.01" min="0" required value="{{ request.form.morning_qty if request.form.morning_qty else '%.2f'|format(record.morning_qty_liters) }}">
+
+    <label for="evening_qty">Evening Quantity (Liters):</label>
+    <input type="number" id="evening_qty" name="evening_qty" step="0.01" min="0" required value="{{ request.form.evening_qty if request.form.evening_qty else '%.2f'|format(record.evening_qty_liters) }}">
+
+    <button type="submit">Update Production</button>
+</form>
+{% endblock %}
