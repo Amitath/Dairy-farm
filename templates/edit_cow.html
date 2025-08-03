@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Edit Cow: {{ cow.name }}{% endblock %}
+
+{% block content %}
+<h2>Edit Cow: {{ cow.name }} ({{ cow.cow_id }})</h2>
+<form method="POST">
+    <label for="cow_id">Cow Unique ID/Name:</label>
+    <input type="text" id="cow_id" name="cow_id" required value="{{ request.form.cow_id if request.form.cow_id else cow.cow_id }}">
+
+    <label for="name">Cow Name:</label>
+    <input type="text" id="name" name="name" required value="{{ request.form.name if request.form.name else cow.name }}">
+
+    <label for="breed">Breed (Optional):</label>
+    <input type="text" id="breed" name="breed" value="{{ request.form.breed if request.form.breed else cow.breed if cow.breed else '' }}">
+
+    <label for="date_of_birth">Date of Birth (YYYY-MM-DD, Optional):</label>
+    <input type="date" id="date_of_birth" name="date_of_birth" value="{{ request.form.date_of_birth if request.form.date_of_birth else (cow.date_of_birth.strftime('%Y-%m-%d') if cow.date_of_birth else '') }}">
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="is_pregnant" name="is_pregnant" {% if request.form.is_pregnant or cow.is_pregnant %}checked{% endif %}>
+        <label for="is_pregnant">Is Currently Pregnant?</label>
+    </div>
+
+    <label for="expected_calving_date">Expected Calving Date (YYYY-MM-DD, Optional):</label>
+    <input type="date" id="expected_calving_date" name="expected_calving_date" value="{{ request.form.expected_calving_date if request.form.expected_calving_date else (cow.expected_calving_date.strftime('%Y-%m-%d') if cow.expected_calving_date else '') }}">
+
+    <label for="status">Status:</label>
+    <select id="status" name="status" required>
+        <option value="active" {% if (request.form.status or cow.status) == 'active' %}selected{% endif %}>Active</option>
+        <option value="sold" {% if (request.form.status or cow.status) == 'sold' %}selected{% endif %}>Sold</option>
+        <option value="deceased" {% if (request.form.status or cow.status) == 'deceased' %}selected{% endif %}>Deceased</option>
+    </select>
+
+    <button type="submit">Update Cow</button>
+</form>
+{% endblock %}
