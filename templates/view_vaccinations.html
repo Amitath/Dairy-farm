@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}View Vaccinations{% endblock %}
+
+{% block content %}
+<h2>All Vaccination Records</h2>
+{% if vaccinations %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Cow</th>
+                    <th>Vaccine Name</th>
+                    <th>Vaccination Date</th>
+                    <th>Next Due Date</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Logged At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vac in vaccinations %}
+                <tr>
+                    <td>{{ vac.cow.name }} ({{ vac.cow.cow_id }})</td>
+                    <td>{{ vac.vaccine_name }}</td>
+                    <td>{{ vac.vaccination_date.strftime('%Y-%m-%d') }}</td>
+                    <td class="{% if vac.next_due_date and vac.next_due_date < today %}overdue{% endif %}">
+                        {{ vac.next_due_date.strftime('%Y-%m-%d') if vac.next_due_date else 'N/A' }}
+                    </td>
+                    <td>{{ vac.status }}</td>
+                    <td>{{ vac.notes if vac.notes else 'N/A' }}</td>
+                    <td>{{ vac.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <!-- Add Edit/Delete links here later -->
+                        <a href="#">Edit</a> | <a href="#">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>No vaccination records found. <a href="{{ url_for('add_vaccination') }}">Add one now</a>.</p>
+{% endif %}
+{% endblock %}
