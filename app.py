@@ -1,7 +1,8 @@
 # app.py
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file
-from models import db, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User # <--- Import User model
+from models import db, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User, Vaccination # <--- Import Vaccination
+from datetime import date, datetime, timedelta # <--- Import timedelta
 from datetime import date, datetime
 from sqlalchemy import func, extract
 from config import Config
@@ -111,6 +112,23 @@ def index():
     active_cows = Cow.query.filter_by(status='active').count()
 
     today_date = date.today()
+    # --- Reminder Logic ---
+    # Pregnancy Reminders (4 days before due date)
+    four_days_from_now = today_date + timedelta(days=4)
+    upcoming_calving_reminders = Cow.query.filter(
+        Cow.is_pregnant == True,
+        Cow.expected_calving_date >= today_date,
+        Cow.expected_calving_date <= four_days_from_now
+    ).order_by(Cow.expected_calving_date).all()
+
+    # Vaccination Reminders (Due today or in the next 7 days, or overdue)
+    seven_days_from_now = today_date + timedelta(days=7)
+    upcoming_vaccination_reminders = Vaccination.query.filter(
+        (Vaccination.next_due_date >= today_date) & (Vaccination.next_due_date <= seven_days_from_now) |
+        (Vaccination.next_due_date < today_date), # Overdue
+        Vaccination.status != 'Completed' # Don't show completed ones
+    ).order_by(Vaccination.next_due_date).all()
+    # ----------------------
     today_milk_records = MilkProduction.query.filter_by(date=today_date).all()
     total_today_milk = sum(rec.total_daily_quantity() for rec in today_milk_records)
 
@@ -125,9 +143,13 @@ def index():
                            total_today_milk=total_today_milk,
                            total_receivable=total_receivable,
                            recent_sales=recent_sales,
-                           recent_expenses=recent_expenses)
+                           recent_expenses=recent_expenses,
+                           upcoming_calving_reminders=upcoming_calving_reminders, # <--- Pass to template
+                           upcoming_vaccination_reminders=upcoming_vaccination_reminders # <--- Pass to template
+                           )
 
-# Apply @login_required to ALL other routes where data access/modification is needed:
+
+# --- Cow Management ---
 @app.route('/cows')
 @login_required
 def view_cows():
@@ -137,12 +159,15 @@ def view_cows():
 @app.route('/cows/add', methods=['GET', 'POST'])
 @login_required
 def add_cow():
-    # ... (existing add_cow code) ...
     if request.method == 'POST':
         cow_id = request.form['cow_id']
         name = request.form['name']
         breed = request.form.get('breed')
         date_of_birth_str = request.form.get('date_of_birth')
+        # --- NEW COW FIELDS ---
+        expected_calving_date_str = request.form.get('expected_calving_date')
+        is_pregnant = bool(request.form.get('is_pregnant')) # Checkbox returns 'on' or None
+        # ----------------------
 
         date_of_birth = None
         if date_of_birth_str:
@@ -150,15 +175,25 @@ def add_cow():
                 date_of_birth = datetime.strptime(date_of_birth_str, '%Y-%m-%d').date()
             except ValueError:
                 flash("Invalid date format for Date of Birth. Please use YYYY-MM-DD.", 'danger')
-                return render_template('add_cow.html')
+                return render_template('add_cow.html', **request.form) # Pass back all form data
+
+        expected_calving_date = None
+        if expected_calving_date_str:
+            try:
+                expected_calving_date = datetime.strptime(expected_calving_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("Invalid date format for Expected Calving Date. Please use YYYY-MM-DD.", 'danger')
+                return render_template('add_cow.html', **request.form) # Pass back all form data
+
 
         existing_cow = Cow.query.filter_by(cow_id=cow_id).first()
         if existing_cow:
             flash(f"Cow ID '{cow_id}' already exists. Please use a unique ID.", 'danger')
-            return render_template('add_cow.html', cow_id=cow_id, name=name, breed=breed, date_of_birth=date_of_birth_str)
+            return render_template('add_cow.html', **request.form)
 
 
-        new_cow = Cow(cow_id=cow_id, name=name, breed=breed, date_of_birth=date_of_birth)
+        new_cow = Cow(cow_id=cow_id, name=name, breed=breed, date_of_birth=date_of_birth,
+                      expected_calving_date=expected_calving_date, is_pregnant=is_pregnant) # <--- Include new fields
         try:
             db.session.add(new_cow)
             db.session.commit()
@@ -169,7 +204,62 @@ def add_cow():
             flash(f'Error adding cow: {str(e)}', 'danger')
     return render_template('add_cow.html')
 
+# --- Vaccination Routes ---
+@app.route('/vaccinations/add', methods=['GET', 'POST'])
+@login_required
+def add_vaccination():
+    cows = Cow.query.filter_by(status='active').all()
+    if request.method == 'POST':
+        cow_id = request.form['cow_id']
+        vaccine_name = request.form['vaccine_name']
+        vaccination_date_str = request.form['vaccination_date']
+        next_due_date_str = request.form.get('next_due_date') # Optional
+        notes = request.form.get('notes')
+        status = request.form.get('status', 'Due') # Default to 'Due'
 
+        cow = Cow.query.get(cow_id)
+        if not cow:
+            flash('Cow not found!', 'danger')
+            return render_template('add_vaccination.html', cows=cows, **request.form)
+
+        try:
+            vaccination_date = datetime.strptime(vaccination_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Invalid Vaccination Date format. Please use YYYY-MM-DD.", 'danger')
+            return render_template('add_vaccination.html', cows=cows, **request.form)
+        
+        next_due_date = None
+        if next_due_date_str:
+            try:
+                next_due_date = datetime.strptime(next_due_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("Invalid Next Due Date format. Please use YYYY-MM-DD.", 'danger')
+                return render_template('add_vaccination.html', cows=cows, **request.form)
+
+        new_vaccination = Vaccination(
+            cow_id=cow.id,
+            vaccine_name=vaccine_name,
+            vaccination_date=vaccination_date,
+            next_due_date=next_due_date,
+            notes=notes,
+            status=status
+        )
+        try:
+            db.session.add(new_vaccination)
+            db.session.commit()
+            flash(f'Vaccination for {cow.name} ({vaccine_name}) added successfully!', 'success')
+            return redirect(url_for('view_vaccinations'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding vaccination: {str(e)}', 'danger')
+    return render_template('add_vaccination.html', cows=cows)
+
+@app.route('/vaccinations')
+@login_required
+def view_vaccinations():
+    vaccinations = Vaccination.query.order_by(Vaccination.vaccination_date.desc(), Vaccination.timestamp.desc()).all()
+    return render_template('view_vaccinations.html', vaccinations=vaccinations)
+    
 @app.route('/milk_production/log', methods=['GET', 'POST'])
 @login_required
 def log_milk_production():
@@ -603,3 +693,4 @@ def export_expenses():
 # --- Run the application ---
 if __name__ == '__main__':
     app.run(debug=True)
+
