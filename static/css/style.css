@@ -1,4 +1,4 @@
-/* static/css/style.css */
+/* General Body & Container */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -7,29 +7,49 @@ body {
     color: #333;
 }
 
+main {
+    padding: 15px; /* Adjusted padding for smaller screens */
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3, h4 {
+    color: #2c3e50;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+h1 { text-align: center; }
+
+/* Header & Navigation */
 header {
     background-color: #2c3e50;
     color: white;
     padding: 1rem 0;
-    text-align: center;
 }
 
 header h1 {
     margin: 0;
     padding-bottom: 0.5rem;
+    font-size: 1.8rem; /* Adjusted for mobile */
 }
 
 nav ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex;
+    display: flex; /* Flexbox for horizontal layout */
     justify-content: center;
     background-color: #34495e;
+    flex-wrap: wrap; /* Allow items to wrap on smaller screens */
 }
 
 nav ul li {
     position: relative;
+    flex-shrink: 0; /* Prevent shrinking too much */
 }
 
 nav ul li a {
@@ -38,6 +58,7 @@ nav ul li a {
     text-decoration: none;
     padding: 0.8rem 1.2rem;
     transition: background-color 0.3s ease;
+    white-space: nowrap; /* Prevent breaking links */
 }
 
 nav ul li a:hover, .dropbtn:hover {
@@ -49,10 +70,12 @@ nav ul li a:hover, .dropbtn:hover {
     display: none;
     position: absolute;
     background-color: #f9f9f9;
-    min-width: 160px;
+    min-width: 180px; /* Slightly wider for readability */
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     z-index: 1;
     left: 0; /* Align dropdown with parent */
+    border-radius: 4px;
+    overflow: hidden; /* Ensure rounded corners apply */
 }
 
 .dropdown-content a {
@@ -61,6 +84,7 @@ nav ul li a:hover, .dropbtn:hover {
     text-decoration: none;
     display: block;
     text-align: left;
+    white-space: normal; /* Allow text to wrap within dropdown items */
 }
 
 .dropdown-content a:hover {
@@ -71,27 +95,12 @@ nav ul li a:hover, .dropbtn:hover {
     display: block;
 }
 
-
-main {
-    padding: 20px;
-    max-width: 1200px;
-    margin: 20px auto;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-h2, h3 {
-    color: #2c3e50;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-}
-
+/* Forms */
 form {
     display: grid;
     gap: 15px;
     margin-bottom: 20px;
+    grid-template-columns: 1fr; /* Default to single column */
 }
 
 form label {
@@ -101,13 +110,14 @@ form label {
 form input[type="text"],
 form input[type="number"],
 form input[type="date"],
+form input[type="password"],
 form select,
 form textarea {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    box-sizing: border-box;
 }
 
 form button {
@@ -125,16 +135,34 @@ form button:hover {
     background-color: #218838;
 }
 
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px; /* Less space than other form elements */
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto; /* Allow checkbox to take natural width */
+    margin: 0;
+}
+/* Tables */
+.table-responsive {
+    overflow-x: auto; /* Makes tables scroll horizontally on small screens */
+    margin-bottom: 20px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    min-width: 600px; /* Ensure table doesn't get too squished */
 }
 
 table th, table td {
     border: 1px solid #ddd;
     padding: 10px;
     text-align: left;
+    white-space: nowrap; /* Prevent content from wrapping too much */
 }
 
 table th {
@@ -142,6 +170,7 @@ table th {
     font-weight: bold;
 }
 
+/* Flash Messages */
 .flashes {
     list-style: none;
     padding: 0;
@@ -167,7 +196,14 @@ table th {
     border-color: #f5c6cb;
 }
 
-.dashboard-grid {
+.flashes li.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+/* Dashboard Grids & Cards */
+.dashboard-grid, .reminders-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
@@ -193,6 +229,59 @@ table th {
     color: #2c3e50;
 }
 
+/* Reminder Card Specifics */
+.reminders-section {
+    margin-bottom: 30px;
+}
+
+.reminder-card {
+    text-align: left;
+    border-left: 5px solid; /* Add a colored border */
+}
+
+.reminder-card h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.reminder-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reminder-card ul li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+    font-size: 0.95rem;
+}
+
+/* Reminder Card Colors */
+.reminder-card.urgent {
+    border-color: #dc3545; /* Red for calving */
+    background-color: #fff3f3;
+}
+.reminder-card.urgent h4 {
+    color: #dc3545;
+}
+
+.reminder-card.warning {
+    border-color: #ffc107; /* Orange for vaccinations */
+    background-color: #fff9e6;
+}
+.reminder-card.warning h4 {
+    color: #ffc107;
+}
+
+.reminder-card .overdue {
+    color: #dc3545; /* Red for overdue items within list */
+    font-weight: bold;
+}
+
+
+/* Financial Summary Cards */
 .summary-cards {
     display: flex;
     justify-content: space-around;
@@ -224,14 +313,7 @@ table th {
     font-weight: bold;
 }
 
-footer {
-    text-align: center;
-    padding: 1rem;
-    margin-top: 30px;
-    background-color: #2c3e50;
-    color: white;
-}
-
+/* Authentication Container */
 .auth-container {
     max-width: 400px;
     margin: 50px auto;
@@ -258,7 +340,7 @@ footer {
 .auth-container label {
     text-align: left;
     font-weight: bold;
-    margin-bottom: -10px; /* Adjust spacing */
+    margin-bottom: -10px;
 }
 
 .auth-container input[type="text"],
@@ -272,7 +354,7 @@ footer {
 }
 
 .auth-container button[type="submit"] {
-    background-color: #3498db; /* A nice blue for login */
+    background-color: #3498db;
     color: white;
     padding: 12px 20px;
     border: none;
@@ -300,4 +382,62 @@ footer {
 
 .auth-container p a:hover {
     text-decoration: underline;
+}
+
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 1rem;
+    margin-top: 30px;
+    background-color: #2c3e50;
+    color: white;
+}
+
+/* --- Mobile Specific Adjustments (Media Queries) --- */
+@media screen and (max-width: 768px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    nav ul {
+        flex-direction: column; /* Stack navigation items vertically */
+        align-items: center; /* Center items in the column */
+        padding-top: 0.5rem;
+    }
+
+    nav ul li {
+        width: 100%; /* Make list items full width */
+        text-align: center;
+    }
+
+    nav ul li a {
+        padding: 0.7rem 0.5rem; /* Adjust padding for smaller items */
+    }
+
+    .dropdown-content {
+        position: static; /* Make dropdowns flow naturally */
+        width: 100%; /* Full width */
+        box-shadow: none; /* Remove shadow */
+        border-radius: 0;
+    }
+
+    .dashboard-grid, .reminders-grid {
+        grid-template-columns: 1fr; /* Stack dashboard cards in a single column */
+    }
+
+    .summary-cards {
+        flex-direction: column; /* Stack financial summary cards */
+    }
+
+    /* Adjust form layout for smaller screens if needed */
+    form {
+        grid-template-columns: 1fr; /* Ensure single column layout for forms */
+        padding: 0 10px; /* Add some horizontal padding */
+    }
+
+    /* Tables already have overflow-x: auto, which is the primary mobile table solution */
+    table th, table td {
+        font-size: 0.9em; /* Slightly smaller font for tables */
+    }
 }
