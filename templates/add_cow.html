@@ -16,6 +16,14 @@
     <label for="date_of_birth">Date of Birth (YYYY-MM-DD, Optional):</label>
     <input type="date" id="date_of_birth" name="date_of_birth" value="{{ request.form.date_of_birth if request.form.date_of_birth else '' }}">
 
+    <div class="checkbox-group">
+        <input type="checkbox" id="is_pregnant" name="is_pregnant" {% if request.form.is_pregnant %}checked{% endif %}>
+        <label for="is_pregnant">Is Currently Pregnant?</label>
+    </div>
+
+    <label for="expected_calving_date">Expected Calving Date (YYYY-MM-DD, Optional):</label>
+    <input type="date" id="expected_calving_date" name="expected_calving_date" value="{{ request.form.expected_calving_date if request.form.expected_calving_date else '' }}">
+
     <button type="submit">Add Cow</button>
 </form>
 {% endblock %}
