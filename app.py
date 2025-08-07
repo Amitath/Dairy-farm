@@ -1,8 +1,8 @@
-# app.py
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+# <--- Import new models: Vaccination, and ensure Cow is imported if updating it
 from models import db, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User, Vaccination
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta # <--- Import timedelta for date calculations
 from sqlalchemy import func, extract
 from config import Config
 import click
@@ -42,7 +42,7 @@ def create_db_command():
         os.makedirs(instance_path)
         click.echo(f"Created instance directory: {instance_path}")
 
-    db.create_all()
+    db.create_all() # This will now also create the 'vaccination' table
     click.echo("Database tables created!")
 
 @app.cli.command("create-admin-user")
@@ -64,7 +64,6 @@ def create_admin_user_command(username, password):
 
 
 # --- Authentication Routes ---
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -73,7 +72,6 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-
         user = User.query.filter_by(username=username).first()
 
         if user is None or not user.check_password(password):
@@ -96,7 +94,6 @@ def logout():
 
 
 # --- Protected Routes ---
-
 @app.route('/')
 @login_required
 def index():
@@ -104,23 +101,6 @@ def index():
     active_cows = Cow.query.filter_by(status='active').count()
 
     today_date = date.today()
-    
-    # --- Reminder Logic ---
-    four_days_from_now = today_date + timedelta(days=4)
-    upcoming_calving_reminders = Cow.query.filter(
-        Cow.is_pregnant == True,
-        Cow.expected_calving_date >= today_date,
-        Cow.expected_calving_date <= four_days_from_now
-    ).order_by(Cow.expected_calving_date).all()
-
-    seven_days_from_now = today_date + timedelta(days=7)
-    upcoming_vaccination_reminders = Vaccination.query.filter(
-        (Vaccination.next_due_date >= today_date) & (Vaccination.next_due_date <= seven_days_from_now) |
-        (Vaccination.next_due_date < today_date), # Overdue
-        Vaccination.status != 'Completed'
-    ).order_by(Vaccination.next_due_date).all()
-    # ----------------------
-
     today_milk_records = MilkProduction.query.filter_by(date=today_date).all()
     total_today_milk = sum(rec.total_daily_quantity() for rec in today_milk_records)
 
@@ -129,6 +109,26 @@ def index():
     recent_sales = Sale.query.order_by(Sale.timestamp.desc()).limit(5).all()
     recent_expenses = Expense.query.order_by(Expense.timestamp.desc()).limit(5).all()
 
+    # --- NEW: Reminder Logic for Dashboard ---
+    upcoming_vaccinations = []
+    # Vaccinations due within the next 30 days
+    vaccination_reminder_window = today_date + timedelta(days=30)
+    upcoming_vaccinations = Vaccination.query.filter(
+        Vaccination.next_due_date >= today_date,
+        Vaccination.next_due_date <= vaccination_reminder_window
+    ).order_by(Vaccination.next_due_date).all()
+
+    pregnant_cow_reminders = []
+    # Pregnant cows with due date within the next 4 days
+    pregnancy_start_window = today_date
+    pregnancy_end_window = today_date + timedelta(days=4)
+    pregnant_cow_reminders = Cow.query.filter(
+        Cow.is_pregnant == True,
+        Cow.pregnancy_due_date >= pregnancy_start_window,
+        Cow.pregnancy_due_date <= pregnancy_end_window
+    ).order_by(Cow.pregnancy_due_date).all()
+
+
     return render_template('index.html',
                            total_cows=total_cows,
                            active_cows=active_cows,
@@ -136,12 +136,10 @@ def index():
                            total_receivable=total_receivable,
                            recent_sales=recent_sales,
                            recent_expenses=recent_expenses,
-                           upcoming_calving_reminders=upcoming_calving_reminders,
-                           upcoming_vaccination_reminders=upcoming_vaccination_reminders
-                           )
+                           upcoming_vaccinations=upcoming_vaccinations, # <--- Pass to template
+                           pregnant_cow_reminders=pregnant_cow_reminders) # <--- Pass to template
 
-
-# --- Cow Management ---
+# --- Cow Management (UPDATE: add pregnancy fields) ---
 @app.route('/cows')
 @login_required
 def view_cows():
@@ -156,8 +154,8 @@ def add_cow():
         name = request.form['name']
         breed = request.form.get('breed')
         date_of_birth_str = request.form.get('date_of_birth')
-        expected_calving_date_str = request.form.get('expected_calving_date')
-        is_pregnant = bool(request.form.get('is_pregnant')) 
+        is_pregnant = 'is_pregnant' in request.form # Checkbox value
+        pregnancy_due_date_str = request.form.get('pregnancy_due_date')
 
         date_of_birth = None
         if date_of_birth_str:
@@ -165,16 +163,15 @@ def add_cow():
                 date_of_birth = datetime.strptime(date_of_birth_str, '%Y-%m-%d').date()
             except ValueError:
                 flash("Invalid date format for Date of Birth. Please use YYYY-MM-DD.", 'danger')
-                return render_template('add_cow.html', **request.form)
+                return render_template('add_cow.html', **request.form) # Pass form data back
 
-        expected_calving_date = None
-        if expected_calving_date_str:
+        pregnancy_due_date = None
+        if is_pregnant and pregnancy_due_date_str:
             try:
-                expected_calving_date = datetime.strptime(expected_calving_date_str, '%Y-%m-%d').date()
+                pregnancy_due_date = datetime.strptime(pregnancy_due_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash("Invalid date format for Expected Calving Date. Please use YYYY-MM-DD.", 'danger')
+                flash("Invalid date format for Pregnancy Due Date. Please use YYYY-MM-DD.", 'danger')
                 return render_template('add_cow.html', **request.form)
-
 
         existing_cow = Cow.query.filter_by(cow_id=cow_id).first()
         if existing_cow:
@@ -183,7 +180,7 @@ def add_cow():
 
 
         new_cow = Cow(cow_id=cow_id, name=name, breed=breed, date_of_birth=date_of_birth,
-                      expected_calving_date=expected_calving_date, is_pregnant=is_pregnant)
+                      is_pregnant=is_pregnant, pregnancy_due_date=pregnancy_due_date)
         try:
             db.session.add(new_cow)
             db.session.commit()
@@ -451,7 +448,7 @@ def delete_health_record(record_id):
     return redirect(url_for('view_health_records'))
 
 
-# --- Vaccination Routes (Existing) ---
+# --- NEW: Vaccination Routes ---
 @app.route('/vaccinations/add', methods=['GET', 'POST'])
 @login_required
 def add_vaccination():
@@ -460,9 +457,8 @@ def add_vaccination():
         cow_id = request.form['cow_id']
         vaccine_name = request.form['vaccine_name']
         vaccination_date_str = request.form['vaccination_date']
-        next_due_date_str = request.form.get('next_due_date') # Optional
+        next_due_date_str = request.form.get('next_due_date')
         notes = request.form.get('notes')
-        status = request.form.get('status', 'Due') # Default to 'Due'
 
         cow = Cow.query.get(cow_id)
         if not cow:
@@ -472,15 +468,15 @@ def add_vaccination():
         try:
             vaccination_date = datetime.strptime(vaccination_date_str, '%Y-%m-%d').date()
         except ValueError:
-            flash("Invalid Vaccination Date format. Please use YYYY-MM-DD.", 'danger')
+            flash("Invalid date format for Vaccination Date. Please use YYYY-MM-DD.", 'danger')
             return render_template('add_vaccination.html', cows=cows, **request.form)
-        
+
         next_due_date = None
         if next_due_date_str:
             try:
                 next_due_date = datetime.strptime(next_due_date_str, '%Y-%m-%d').date()
             except ValueError:
-                flash("Invalid Next Due Date format. Please use YYYY-MM-DD.", 'danger')
+                flash("Invalid date format for Next Due Date. Please use YYYY-MM-DD.", 'danger')
                 return render_template('add_vaccination.html', cows=cows, **request.form)
 
         new_vaccination = Vaccination(
@@ -488,13 +484,12 @@ def add_vaccination():
             vaccine_name=vaccine_name,
             vaccination_date=vaccination_date,
             next_due_date=next_due_date,
-            notes=notes,
-            status=status
+            notes=notes
         )
         try:
             db.session.add(new_vaccination)
             db.session.commit()
-            flash(f'Vaccination for {cow.name} ({vaccine_name}) added successfully!', 'success')
+            flash(f'Vaccination record for {cow.name} ({vaccine_name}) added successfully!', 'success')
             return redirect(url_for('view_vaccinations'))
         except Exception as e:
             db.session.rollback()
@@ -504,65 +499,25 @@ def add_vaccination():
 @app.route('/vaccinations')
 @login_required
 def view_vaccinations():
-    vaccinations = Vaccination.query.order_by(Vaccination.vaccination_date.desc(), Vaccination.timestamp.desc()).all()
+    vaccinations = Vaccination.query.order_by(Vaccination.vaccination_date.desc()).all()
     return render_template('view_vaccinations.html', vaccinations=vaccinations)
 
-
-@app.route('/vaccinations/edit/<int:vac_id>', methods=['GET', 'POST'])
+@app.route('/vaccinations/delete/<int:id>', methods=['POST'])
 @login_required
-def edit_vaccination(vac_id):
-    vac = db.session.get(Vaccination, vac_id)
-    if vac is None:
+def delete_vaccination(id):
+    vaccination_record = db.session.get(Vaccination, id)
+    if not vaccination_record:
         flash('Vaccination record not found.', 'danger')
-        abort(404)
-    
-    cows = Cow.query.filter_by(status='active').all()
-
-    if request.method == 'POST':
-        vac.cow_id = request.form['cow_id']
-        vac.vaccine_name = request.form['vaccine_name']
-        vaccination_date_str = request.form['vaccination_date']
-        next_due_date_str = request.form.get('next_due_date')
-        vac.notes = request.form.get('notes')
-        vac.status = request.form['status']
-
-        try:
-            vac.vaccination_date = datetime.strptime(vaccination_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            flash("Invalid Vaccination Date format. Please use YYYY-MM-DD.", 'danger')
-            return render_template('edit_vaccination.html', vac=vac, cows=cows, **request.form)
-        
-        next_due_date = None
-        if next_due_date_str:
-            try:
-                next_due_date = datetime.strptime(next_due_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash("Invalid Next Due Date format. Please use YYYY-MM-DD.", 'danger')
-                return render_template('edit_vaccination.html', vac=vac, cows=cows, **request.form)
-        vac.next_due_date = next_due_date
-
-        try:
-            db.session.commit()
-            flash(f'Vaccination for {vac.cow.name} ({vac.vaccine_name}) updated successfully!', 'success')
-            return redirect(url_for('view_vaccinations'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error updating vaccination: {str(e)}', 'danger')
-
-    return render_template('edit_vaccination.html', vac=vac, cows=cows)
-
-@app.route('/vaccinations/delete/<int:vac_id>', methods=['POST'])
-@login_required
-def delete_vaccination(vac_id):
-    vac = db.session.get(Vaccination, vac_id)
-    if vac is None:
-        flash('Vaccination record not found.', 'danger')
-        abort(404)
+        return redirect(url_for('view_vaccinations'))
 
     try:
-        db.session.delete(vac)
+        # FIX FOR DELETION ERROR: Get related data BEFORE deleting and committing
+        cow_name = vaccination_record.cow.name if vaccination_record.cow else 'Unknown Cow'
+        vaccine_name = vaccination_record.vaccine_name
+
+        db.session.delete(vaccination_record)
         db.session.commit()
-        flash(f'Vaccination record for {vac.cow.name} ({vac.vaccine_name}) deleted successfully!', 'success')
+        flash(f'Vaccination record for {cow_name} ({vaccine_name}) deleted successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting vaccination: {str(e)}', 'danger')
@@ -1166,4 +1121,5 @@ def export_vaccinations():
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
+
 
