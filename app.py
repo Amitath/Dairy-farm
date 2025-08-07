@@ -1,22 +1,22 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file
-# <--- Import new models: Vaccination, and ensure Cow is imported if updating it
-from models import db, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User, Vaccination
-from datetime import date, datetime, timedelta # <--- Import timedelta for date calculations
+# Only import the models you need to directly query in this file
+from models import Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User, Vaccination
+from datetime import date, datetime, timedelta
 from sqlalchemy import func, extract
 from config import Config
 import click
 import pandas as pd
 import io
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+# NEW: Import db and login_manager from extensions
+from extensions import db, login_manager # <--- NEW IMPORT
 
 app = Flask(__name__)
 app.config.from_object(Config)
-db.init_app(app)
 
-# --- Flask-Login Setup ---
-login_manager = LoginManager()
-login_manager.init_app(app)
+# Initialize extensions with the app instance
+db.init_app(app)
+login_manager.init_app(app) # Initialize login_manager here
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
@@ -37,20 +37,25 @@ def inject_common_variables():
 @app.cli.command("create-db")
 def create_db_command():
     """Creates the database tables."""
-    instance_path = os.path.join(app.root_path, 'instance')
-    if not os.path.exists(instance_path):
-        os.makedirs(instance_path)
-        click.echo(f"Created instance directory: {instance_path}")
+    with app.app_context(): # Ensure we are in the app context
+        instance_path = os.path.join(app.root_path, 'instance')
+        if not os.path.exists(instance_path):
+            os.makedirs(instance_path)
+            click.echo(f"Created instance directory: {instance_path}")
+        
+        # Ensure all models are loaded before calling create_all
+        # (They usually are due to imports at top, but explicit import can help in complex setups)
+        # from models import User, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, Vaccination 
 
-    db.create_all() # This will now also create the 'vaccination' table
-    click.echo("Database tables created!")
+        db.create_all()
+        click.echo("Database tables created!")
 
 @app.cli.command("create-admin-user")
 @click.argument('username')
 @click.argument('password')
 def create_admin_user_command(username, password):
     """Creates an initial admin user."""
-    with app.app_context():
+    with app.app_context(): # Ensure we are in the app context
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             click.echo(f"User '{username}' already exists. Please choose a different username.")
@@ -72,6 +77,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+
         user = User.query.filter_by(username=username).first()
 
         if user is None or not user.check_password(password):
@@ -1121,5 +1127,6 @@ def export_vaccinations():
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
+
 
 
