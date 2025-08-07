@@ -6,10 +6,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
+# --- User Model ---
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False) # Changed to 255 for scrypt hashes
+    password_hash = db.Column(db.String(255), nullable=False) # Changed to 255 previously
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -20,6 +21,8 @@ class User(db.Model, UserMixin):
     def __repr__(self):
         return f"<User {self.username}>"
 
+
+# --- Cow Model (UPDATED) ---
 class Cow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cow_id = db.Column(db.String(50), unique=True, nullable=False)
@@ -29,32 +32,31 @@ class Cow(db.Model):
     status = db.Column(db.String(50), default='active') # e.g., 'active', 'sold', 'deceased'
 
     # --- NEW REMINDER FIELDS ---
-    expected_calving_date = db.Column(db.Date)
+    # NEW FIELDS for pregnancy tracking:
     is_pregnant = db.Column(db.Boolean, default=False)
-    # ---------------------------
+    pregnancy_due_date = db.Column(db.Date) # Estimated due date
 
+    # Relationships
     milk_productions = db.relationship('MilkProduction', backref='cow', lazy=True)
     health_records = db.relationship('HealthRecord', backref='cow', lazy=True)
-    # Define relationship for new Vaccination model
-    vaccinations = db.relationship('Vaccination', backref='cow', lazy=True)
+    vaccinations = db.relationship('Vaccination', backref='cow', lazy=True, cascade="all, delete-orphan")
 
 
     def __repr__(self):
         return f"<Cow {self.name} ({self.cow_id})>"
 
-class MilkProduction(db.Model):
+# --- NEW Vaccination Model ---
+class Vaccination(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cow_id = db.Column(db.Integer, db.ForeignKey('cow.id'), nullable=False)
-    date = db.Column(db.Date, nullable=False, default=date.today)
-    morning_qty_liters = db.Column(db.Float, nullable=False)
-    evening_qty_liters = db.Column(db.Float, nullable=False)
+    vaccine_name = db.Column(db.String(100), nullable=False)
+    vaccination_date = db.Column(db.Date, nullable=False, default=date.today)
+    next_due_date = db.Column(db.Date) # For booster/next dose, can be null
+    notes = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def total_daily_quantity(self):
-        return self.morning_qty_liters + self.evening_qty_liters
-
     def __repr__(self):
-        return f"<MilkProd {self.cow.name} on {self.date}: {self.total_daily_quantity()}L>"
+        return f"<Vaccination for {self.cow.name} ({self.vaccine_name}) on {self.vaccination_date}>"
 
 class HealthRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -129,3 +131,4 @@ class Expense(db.Model):
 
     def __repr__(self):
         return f"<Expense {self.category} on {self.date}: {self.amount:.2f}>"
+
