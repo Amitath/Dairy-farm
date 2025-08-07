@@ -1,16 +1,17 @@
-# models.py
-from flask_sqlalchemy import SQLAlchemy
+# # models.py
+# from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db 
 
-db = SQLAlchemy()
+# db = SQLAlchemy()
 
 # --- User Model ---
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False) # Changed to 255 previously
+    password_hash = db.Column(db.String(255), nullable=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -21,7 +22,6 @@ class User(db.Model, UserMixin):
     def __repr__(self):
         return f"<User {self.username}>"
 
-
 # --- Cow Model (UPDATED) ---
 class Cow(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -29,21 +29,19 @@ class Cow(db.Model):
     name = db.Column(db.String(100), nullable=False)
     breed = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date)
-    status = db.Column(db.String(50), default='active') # e.g., 'active', 'sold', 'deceased'
+    status = db.Column(db.String(50), default='active')
 
-    # --- NEW REMINDER FIELDS ---
-    # NEW FIELDS for pregnancy tracking:
     is_pregnant = db.Column(db.Boolean, default=False)
-    pregnancy_due_date = db.Column(db.Date) # Estimated due date
+    pregnancy_due_date = db.Column(db.Date)
 
-    # Relationships
     milk_productions = db.relationship('MilkProduction', backref='cow', lazy=True)
     health_records = db.relationship('HealthRecord', backref='cow', lazy=True)
     vaccinations = db.relationship('Vaccination', backref='cow', lazy=True, cascade="all, delete-orphan")
 
-
     def __repr__(self):
+        # Using cow_id for __repr__ to avoid potential lazy load issues during debugging/startup
         return f"<Cow {self.name} ({self.cow_id})>"
+
 
 # --- NEW Vaccination Model ---
 class Vaccination(db.Model):
@@ -51,13 +49,14 @@ class Vaccination(db.Model):
     cow_id = db.Column(db.Integer, db.ForeignKey('cow.id'), nullable=False)
     vaccine_name = db.Column(db.String(100), nullable=False)
     vaccination_date = db.Column(db.Date, nullable=False, default=date.today)
-    next_due_date = db.Column(db.Date) # For booster/next dose, can be null
+    next_due_date = db.Column(db.Date)
     notes = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<Vaccination for {self.cow.name} ({self.vaccine_name}) on {self.vaccination_date}>"
-
+        # Update __repr__ to avoid potential lazy load issues during app initialization on Render
+        return f"<Vaccination {self.vaccine_name} for Cow ID {self.cow_id} due {self.next_due_date}>"
+        
 class HealthRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cow_id = db.Column(db.Integer, db.ForeignKey('cow.id'), nullable=False)
@@ -131,4 +130,5 @@ class Expense(db.Model):
 
     def __repr__(self):
         return f"<Expense {self.category} on {self.date}: {self.amount:.2f}>"
+
 
