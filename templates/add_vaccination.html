@@ -2,13 +2,13 @@
 {% block title %}Add Vaccination Record{% endblock %}
 
 {% block content %}
-<h2>Add Vaccination Record</h2>
+<h2>Add New Vaccination Record</h2>
 <form method="POST">
     <label for="cow_id">Select Cow:</label>
     <select id="cow_id" name="cow_id" required>
         <option value="">-- Select a Cow --</option>
         {% for cow in cows %}
-            <option value="{{ cow.id }}" {% if request.form.cow_id == cow.id|string %}selected{% endif %}>
+            <option value="{{ cow.id }}" {% if cow.id|string == request.form.cow_id %}selected{% endif %}>
                 {{ cow.name }} ({{ cow.cow_id }})
             </option>
         {% endfor %}
@@ -20,18 +20,11 @@
     <label for="vaccination_date">Vaccination Date:</label>
     <input type="date" id="vaccination_date" name="vaccination_date" value="{{ request.form.vaccination_date if request.form.vaccination_date else today.strftime('%Y-%m-%d') }}" required>
 
-    <label for="next_due_date">Next Due Date (Optional - e.g., for booster):</label>
+    <label for="next_due_date">Next Due Date (Optional - for boosters):</label>
     <input type="date" id="next_due_date" name="next_due_date" value="{{ request.form.next_due_date if request.form.next_due_date else '' }}">
 
-    <label for="status">Status:</label>
-    <select id="status" name="status">
-        <option value="Due" {% if request.form.status == 'Due' %}selected{% endif %}>Due</option>
-        <option value="Completed" {% if request.form.status == 'Completed' %}selected{% endif %}>Completed</option>
-        <option value="Overdue" {% if request.form.status == 'Overdue' %}selected{% endif %}>Overdue</option>
-    </select>
-
     <label for="notes">Notes (Optional):</label>
-    <textarea id="notes" name="notes" rows="3">{{ request.form.notes if request.form.notes else '' }}</textarea>
+    <textarea id="notes" name="notes" rows="4">{{ request.form.notes if request.form.notes else '' }}</textarea>
 
     <button type="submit">Add Vaccination</button>
 </form>
