@@ -1,22 +1,22 @@
+# app.py
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file
-# Only import the models you need to directly query in this file
 from models import Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, User, Vaccination
 from datetime import date, datetime, timedelta
 from sqlalchemy import func, extract
 from config import Config
-import click
+import click # Still needed for create-admin-user
 import pandas as pd
 import io
-# NEW: Import db and login_manager from extensions
-from extensions import db, login_manager # <--- NEW IMPORT
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+
+from extensions import db, login_manager # From extensions.py
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Initialize extensions with the app instance
 db.init_app(app)
-login_manager.init_app(app) # Initialize login_manager here
+login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
@@ -33,29 +33,25 @@ def inject_common_variables():
         'current_user': current_user
     }
 
-# --- Flask CLI Custom Commands ---
-@app.cli.command("create-db")
-def create_db_command():
-    """Creates the database tables."""
-    with app.app_context(): # Ensure we are in the app context
-        instance_path = os.path.join(app.root_path, 'instance')
-        if not os.path.exists(instance_path):
-            os.makedirs(instance_path)
-            click.echo(f"Created instance directory: {instance_path}")
-        
-        # Ensure all models are loaded before calling create_all
-        # (They usually are due to imports at top, but explicit import can help in complex setups)
-        # from models import User, Cow, MilkProduction, HealthRecord, Customer, Sale, Payment, Expense, Vaccination 
+# --- Database Schema Creation on App Startup (NEW STRATEGY) ---
+# This block runs when the app is created and ensures tables exist.
+# It's put after db.init_app(app) and before routes.
+with app.app_context():
+    # It's safe to call create_all multiple times; SQLAlchemy only creates missing tables.
+    db.create_all()
+    # Adding a print statement here to confirm in Render logs
+    print("Database tables ensured (create_all called during app startup).")
 
-        db.create_all()
-        click.echo("Database tables created!")
+
+# --- Flask CLI Custom Commands (Only create-admin-user remains) ---
+# REMOVE: @app.cli.command("create-db") entire block
 
 @app.cli.command("create-admin-user")
 @click.argument('username')
 @click.argument('password')
 def create_admin_user_command(username, password):
     """Creates an initial admin user."""
-    with app.app_context(): # Ensure we are in the app context
+    with app.app_context():
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             click.echo(f"User '{username}' already exists. Please choose a different username.")
@@ -99,25 +95,16 @@ def logout():
     return redirect(url_for('login'))
 
 
-# --- Protected Routes ---
+# --- Protected Routes (apply @login_required) ---
 @app.route('/')
 @login_required
 def index():
+    # ... (existing code for dashboard, now it will run after tables are guaranteed to exist) ...
     total_cows = Cow.query.count()
     active_cows = Cow.query.filter_by(status='active').count()
 
     today_date = date.today()
-    today_milk_records = MilkProduction.query.filter_by(date=today_date).all()
-    total_today_milk = sum(rec.total_daily_quantity() for rec in today_milk_records)
-
-    total_receivable = db.session.query(func.sum(Customer.balance)).scalar() or 0.0
-
-    recent_sales = Sale.query.order_by(Sale.timestamp.desc()).limit(5).all()
-    recent_expenses = Expense.query.order_by(Expense.timestamp.desc()).limit(5).all()
-
-    # --- NEW: Reminder Logic for Dashboard ---
     upcoming_vaccinations = []
-    # Vaccinations due within the next 30 days
     vaccination_reminder_window = today_date + timedelta(days=30)
     upcoming_vaccinations = Vaccination.query.filter(
         Vaccination.next_due_date >= today_date,
@@ -125,7 +112,6 @@ def index():
     ).order_by(Vaccination.next_due_date).all()
 
     pregnant_cow_reminders = []
-    # Pregnant cows with due date within the next 4 days
     pregnancy_start_window = today_date
     pregnancy_end_window = today_date + timedelta(days=4)
     pregnant_cow_reminders = Cow.query.filter(
@@ -133,6 +119,35 @@ def index():
         Cow.pregnancy_due_date >= pregnancy_start_window,
         Cow.pregnancy_due_date <= pregnancy_end_window
     ).order_by(Cow.pregnancy_due_date).all()
+
+    # Need to handle case where no milk records exist yet
+    try:
+        today_milk_records = MilkProduction.query.filter_by(date=today_date).all()
+        total_today_milk = sum(rec.total_daily_quantity() for rec in today_milk_records)
+    except Exception as e:
+        # If MilkProduction table doesn't exist yet (very first run), default to 0
+        total_today_milk = 0.0
+        print(f"Warning: Could not query MilkProduction table: {e}")
+
+    # Need to handle case where no customers exist yet
+    try:
+        total_receivable = db.session.query(func.sum(Customer.balance)).scalar() or 0.0
+    except Exception as e:
+        total_receivable = 0.0
+        print(f"Warning: Could not query Customer table: {e}")
+
+    # Need to handle cases where tables for sales/expenses don't exist yet
+    try:
+        recent_sales = Sale.query.order_by(Sale.timestamp.desc()).limit(5).all()
+    except Exception as e:
+        recent_sales = []
+        print(f"Warning: Could not query Sale table: {e}")
+
+    try:
+        recent_expenses = Expense.query.order_by(Expense.timestamp.desc()).limit(5).all()
+    except Exception as e:
+        recent_expenses = []
+        print(f"Warning: Could not query Expense table: {e}")
 
 
     return render_template('index.html',
@@ -142,8 +157,9 @@ def index():
                            total_receivable=total_receivable,
                            recent_sales=recent_sales,
                            recent_expenses=recent_expenses,
-                           upcoming_vaccinations=upcoming_vaccinations, # <--- Pass to template
-                           pregnant_cow_reminders=pregnant_cow_reminders) # <--- Pass to template
+                           upcoming_vaccinations=upcoming_vaccinations,
+                           pregnant_cow_reminders=pregnant_cow_reminders)
+    
 
 # --- Cow Management (UPDATE: add pregnancy fields) ---
 @app.route('/cows')
@@ -1127,6 +1143,7 @@ def export_vaccinations():
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
+
 
 
 
